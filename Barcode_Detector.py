@@ -61,7 +61,7 @@ while(cap.isOpened()):
         dilated = cv2.dilate(eroded,dilationKernel,iterations=5)
 
         cv2.imshow('testFrame', dilated)
-        outGray.write(dilated)
+        #outGray.write(dilated)
 
         ## find contours in threshold image, then sort by area
         contours = cv2.findContours(dilated.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE) # findContours will modify the source frame, so copy.
@@ -72,12 +72,13 @@ while(cap.isOpened()):
             ## draw contour using minimum area (rotated rectangle)
             rect = cv2.minAreaRect(contour) # returns a Box2D structure with: ( center (x,y), (width, height), angle of rotation )
             box = cv2.boxPoints(rect) # get four corners of the rectangle
-            box = np.intp(box) # turns into integer used for indexing
-            cv2.drawContours(frame,[box],contourIdx=0,color=(0,255,0),thickness=3)
+            box = np.intp(box) # turns into integer used for indexing; this is the bounding box of the barcode
+            if box is not None:
+                cv2.drawContours(frame,[box],contourIdx=0,color=(0,255,0),thickness=3)
 
         ## display frame and write out to vid
         cv2.imshow('frame',frame)
-        out.write(frame)
+        #out.write(frame)
 
         ## early-termination keystroke
         if cv2.waitKey(1) & 0xFF == 27:
