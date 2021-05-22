@@ -2,6 +2,8 @@ import numpy as np
 import imutils
 import cv2
 import pyzbar.pyzbar as pyzbar
+import roslibpy
+import time
 
 ## Method to detect bounding boxes for barcodes:
 def detectBCBound(frame):
@@ -44,7 +46,7 @@ def detectBCBound(frame):
     ## find contours in threshold image, then sort by area
     contours = cv2.findContours(dilated.copy(), cv2.RETR_TREE,
                                 cv2.CHAIN_APPROX_NONE)  # findContours will modify the source frame, so copy.
-    contours = imutils.grab_contours(contours)
+    contours = imutils.grab_contours(contours) # gets contours from return-vals
     cArr = sorted(contours, key=cv2.contourArea, reverse=True)
     boxes = []
 
@@ -84,7 +86,7 @@ def scanBarcodes(frame, boxes, isNotEmpty):
                 for barcode in barcodes:
                     barcodeData = barcode.data.decode("utf-8")
                     barcodeType = barcode.type
-                    print("[INFO] Found {} barcode: {}".format(barcodeType, barcodeData))
+                    # print("[INFO] Found {} barcode: {}".format(barcodeType, barcodeData))
                     barcodeSet.add((barcodeType, barcodeData))
 
                     ## display barcode id on top LHS of box
@@ -109,15 +111,31 @@ capSize = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAM
 out = cv2.VideoWriter('detectedBarcode1.avi', fourcc, fps, capSize, isColor=1)
 #outGray = cv2.VideoWriter('detectedBarcode2Blobs.avi', fourcc, fps, capSize, isColor=0)
 
+'''
+# in order to use this library, ROS envi needs to be setup to run rosBridge (ROS bridge suite)
+## connect to ros bridge node on local host
+rosClient = roslibpy.Ros(host="localhost", port=9090)
+rosClient.run()
+barcodeTalker = roslibpy.Topic(rosClient, '/barcodes', 'std_msgs/String')
+'''
+
 while(cap.isOpened()):
     isFrameAvail, frame = cap.read()
 
     if isFrameAvail:
         isNotEmpty, boxes = detectBCBound(frame)
         barcodes = scanBarcodes(frame, boxes, isNotEmpty)
-
+        # print(str(barcodes))
         cv2.imshow("frame",frame)
-        #out.write(frame)
+        out.write(frame)
+
+        '''
+        ## publishing out to ros topic:
+        if rosClient.is_connected:
+            barcodeTalker.publish(roslibpy.Message({'barcodes':str(barcodes)}))
+            print('Sending message...')
+            #time.sleep(1)
+        '''
 
         ## early-termination keystroke
         if cv2.waitKey(1) & 0xFF == 27:
@@ -127,10 +145,11 @@ while(cap.isOpened()):
         print("isFrameAvail = " + str(isFrameAvail))
         break
 
-
 cap.release()
 out.release()
 #outGray.release()
 cv2.destroyAllWindows()
-
-
+'''
+barcodeTalker.unadvertise()
+rosClient.terminate()
+'''
