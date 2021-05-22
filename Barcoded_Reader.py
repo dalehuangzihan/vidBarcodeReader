@@ -68,7 +68,7 @@ def detectBCBound(frame):
 
 
 ## Read video from file:
-cap = cv2.VideoCapture('Test2.MOV')
+cap = cv2.VideoCapture('Test1.MOV')
 print(cap.isOpened())
 frameWidth = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 frameHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -77,7 +77,7 @@ frameHeight = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 fourcc = cv2.VideoWriter_fourcc(*'MJPG')
 fps = 20.0
 capSize = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-out = cv2.VideoWriter('detectedBarcode2.avi', fourcc, fps, capSize, isColor=1)
+out = cv2.VideoWriter('detectedBarcode1.avi', fourcc, fps, capSize, isColor=1)
 #outGray = cv2.VideoWriter('detectedBarcode2Blobs.avi', fourcc, fps, capSize, isColor=0)
 
 bcSet = set()
@@ -90,7 +90,8 @@ while(cap.isOpened()):
 
         ## pre-process frame (optimise?)
         grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        (_, thresh) = cv2.threshold(grayFrame, 100, 255, cv2.THRESH_BINARY)  # + cv2.THRESH_OTSU)
+        ''' need to figure out best threshold method...'''
+        (_, thresh) = cv2.threshold(grayFrame, 100, 255, cv2.THRESH_BINARY) # + cv2.THRESH_OTSU)
 
         if notEmpty == True:
             for box in boxes:
