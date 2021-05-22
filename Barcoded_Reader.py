@@ -1,5 +1,4 @@
 import numpy as np
-#import argparse # for parsing command-line arguments
 import imutils
 import cv2
 import pyzbar.pyzbar as pyzbar
@@ -65,7 +64,37 @@ def detectBCBound(frame):
     success = False if len(boxes) == 0 else True
     return success, boxes
 
+## Method to scan barcodes:
+def scanBarcodes(frame, boxes, isNotEmpty):
+    barcodeSet = set()
+    ## pre-process frame (optimise?)
+    grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    ''' need to figure out best threshold method...'''
+    (_, thresh) = cv2.threshold(grayFrame, 100, 255, cv2.THRESH_BINARY)  # + cv2.THRESH_OTSU)
+    if isNotEmpty == True:
+        for box in boxes:
+            ## get scan area (larger than detected position)
+            min = np.min(box, axis=0)  # find top-left corner coords of bounding box
+            max = np.max(box, axis=0)  # find bot-right corner coords of bounding box
+            pad = 10
+            roi = thresh[min[1] - pad: max[1] + pad, min[0] - pad: max[0] + pad]
+            if roi.any() != 0:
+                #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)  # convert from BGR to RGB
+                barcodes = pyzbar.decode(roi)
+                for barcode in barcodes:
+                    barcodeData = barcode.data.decode("utf-8")
+                    barcodeType = barcode.type
+                    print("[INFO] Found {} barcode: {}".format(barcodeType, barcodeData))
+                    barcodeSet.add((barcodeType, barcodeData))
 
+                    ## display barcode id on top LHS of box
+                    (x, y, w, h) = barcode.rect
+                    idStr = "id: " + str(barcodeData)
+                    cv2.putText(frame, idStr, (min[0], min[1] - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    #cv2.rectangle(roi, (x,y), (x+w,y+h), (0,0,255), 2)
+                    #cv2.imshow("roi", roi)
+    return list(barcodeSet)
 
 ## Read video from file:
 cap = cv2.VideoCapture('Test1.MOV')
@@ -80,45 +109,15 @@ capSize = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAM
 out = cv2.VideoWriter('detectedBarcode1.avi', fourcc, fps, capSize, isColor=1)
 #outGray = cv2.VideoWriter('detectedBarcode2Blobs.avi', fourcc, fps, capSize, isColor=0)
 
-bcSet = set()
-
 while(cap.isOpened()):
     isFrameAvail, frame = cap.read()
 
     if isFrameAvail:
-        notEmpty, boxes = detectBCBound(frame)
-
-        ## pre-process frame (optimise?)
-        grayFrame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        ''' need to figure out best threshold method...'''
-        (_, thresh) = cv2.threshold(grayFrame, 100, 255, cv2.THRESH_BINARY) # + cv2.THRESH_OTSU)
-
-        if notEmpty == True:
-            for box in boxes:
-                ## get scan area (larger than detected position)
-                min = np.min(box, axis=0) # find top-left corner coords of bounding box
-                max = np.max(box, axis=0) # find bot-right corner coords of bounding box
-                pad = 10
-                roi = thresh[min[1]-pad : max[1]+pad, min[0]-pad : max[0]+pad]
-                if roi.any() != 0:
-                    #roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)  # convert from BGR to RGB
-                    barcodes = pyzbar.decode(roi)
-                    for barcode in barcodes:
-                        barcodeData = barcode.data.decode("utf-8")
-                        barcodeType = barcode.type
-                        print("[INFO] Found {} barcode: {}".format(barcodeType,barcodeData))
-                        bcSet.add((barcodeType,barcodeData))
-
-                        ## display barcode id on top LHS of box
-                        (x,y,w,h) = barcode.rect
-                        cv2.putText(frame, str(barcodeData), (min[0], min[1] - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
-
-                        #cv2.rectangle(roi, (x,y), (x+w,y+h), (0,0,255), 2)
-                        #cv2.imshow("roi", roi)
+        isNotEmpty, boxes = detectBCBound(frame)
+        barcodes = scanBarcodes(frame, boxes, isNotEmpty)
 
         cv2.imshow("frame",frame)
-        out.write(frame)
+        #out.write(frame)
 
         ## early-termination keystroke
         if cv2.waitKey(1) & 0xFF == 27:
@@ -128,8 +127,6 @@ while(cap.isOpened()):
         print("isFrameAvail = " + str(isFrameAvail))
         break
 
-for item in bcSet:
-    print(item[0],item[1])
 
 cap.release()
 out.release()
