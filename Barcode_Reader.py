@@ -61,8 +61,7 @@ def detectBCBound(frame):
             boxes.append(box)
 
     ## display frame and write out to vid
-    cv2.imshow('frame', frame)
-
+    #cv2.imshow('frame', frame)
     success = False if len(boxes) == 0 else True
     return success, boxes
 
@@ -125,9 +124,8 @@ while(cap.isOpened()):
     if isFrameAvail:
         isNotEmpty, boxes = detectBCBound(frame)
         barcodes = scanBarcodes(frame, boxes, isNotEmpty)
-        # print(str(barcodes))
         cv2.imshow("frame",frame)
-        out.write(frame)
+        #out.write(frame)
 
         '''
         ## publishing out to ros topic:
